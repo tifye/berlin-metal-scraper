@@ -2,14 +2,24 @@ package main
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/charmbracelet/log"
 	"github.com/gocolly/colly"
 )
+
+type Event struct {
+	Title string
+	At    string
+	Date  time.Time
+	Links []EventLink
+}
+
+type EventLink struct {
+	Title string
+	Url   string
+}
 
 type rawEventDataLink struct {
 	text string
@@ -29,7 +39,10 @@ func main() {
 	col.OnHTML("div#scrollbar", func(el *colly.HTMLElement) {
 		eventsData = scrapeConcerts(el)
 	})
-	col.Visit("https://berlinmetal.eu/")
+	err := col.Visit("https://berlinmetal.eu/")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	events := parseRawData(eventsData)
 	for _, event := range events {
@@ -74,91 +87,4 @@ func scrapeConcerts(el *colly.HTMLElement) []rawEventData {
 	})
 
 	return eventsData
-}
-
-type Event struct {
-	Title string
-	At    string
-	Date  time.Time
-	Links []EventLink
-}
-
-type EventLink struct {
-	Title string
-	Url   string
-}
-
-func parseRawData(rawEvents []rawEventData) []Event {
-	events := make([]Event, 0)
-	for _, rawEvent := range rawEvents {
-		event, err := parseEventString(rawEvent.eventString)
-		if err != nil {
-			log.Info("err parsing raw event data", "raw", rawEvent.eventString)
-			continue
-		}
-
-		event.Links = cleanEventLinks(rawEvent.links)
-		events = append(events, event)
-	}
-
-	return events
-}
-
-func cleanEventLinks(rawLinks []rawEventDataLink) []EventLink {
-	links := make([]EventLink, 0, len(rawLinks))
-	for _, rawLink := range rawLinks {
-		title := rawLink.text
-		title = strings.ReplaceAll(title, "ⓘ", "Information")
-		links = append(links, EventLink{Title: title, Url: rawLink.url})
-	}
-	return links
-}
-
-func parseEventString(eventString string) (Event, error) {
-	eventString = strings.Trim(eventString, "@ ")
-	dateStr, titleAt, found := strings.Cut(eventString, " ")
-	if !found {
-		return Event{}, fmt.Errorf("malformed raw event string %s; expected format", eventString)
-	}
-
-	title, at, _ := strings.Cut(titleAt, "@")
-
-	date, err := parseRawEventDate(dateStr)
-	if err != nil {
-		return Event{}, err
-	}
-
-	return Event{
-		Title: title,
-		At:    at,
-		Date:  date,
-	}, nil
-}
-
-func parseRawEventDate(dateStr string) (time.Time, error) {
-	monthStr, dayStr, found := strings.Cut(dateStr, "-")
-	if !found {
-		return time.Time{}, fmt.Errorf("malformed event date string %s; expected mm-dd", dateStr)
-	}
-
-	month, err := strconv.Atoi(monthStr)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	day, err := strconv.Atoi(dayStr)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	loc, _ := time.LoadLocation("Europe/Berlin")
-	currentTime := time.Now().In(loc)
-
-	year := currentTime.Year()
-	if month < int(currentTime.Month()) {
-		year += 1
-	}
-
-	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, loc)
-	return date, nil
 }
