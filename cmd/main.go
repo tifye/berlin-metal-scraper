@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -10,10 +11,11 @@ import (
 )
 
 type Event struct {
-	Title string
-	At    string
-	Date  time.Time
-	Links []EventLink
+	Title  string
+	At     string
+	Date   time.Time
+	Genres []string
+	Links  []EventLink
 }
 
 type EventLink struct {
@@ -46,7 +48,13 @@ func main() {
 
 	events := parseRawData(eventsData)
 	for _, event := range events {
-		fmt.Println(event)
+		fmt.Printf("\n%s\n%s\n%s\n", event.Date.Format(time.DateOnly), event.Title, strings.Join(event.Genres, ", "))
+		if event.At != "" {
+			fmt.Printf("%s\n", event.At)
+		}
+		for _, link := range event.Links {
+			fmt.Printf("%s: %s\n", link.Title, link.Url)
+		}
 	}
 }
 
