@@ -12,10 +12,25 @@ import (
 	"github.com/gocolly/colly"
 )
 
+type EventDate time.Time
+
+func (ed *EventDate) UnmarshalJSON(b []byte) error {
+	t, err := time.Parse(`"2006-01-02"`, string(b))
+	if err != nil {
+		return err
+	}
+	*ed = EventDate(t)
+	return nil
+}
+
+func (ed EventDate) MarshalJSON() ([]byte, error) {
+	return []byte(time.Time(ed).Format(`"2006-01-02"`)), nil
+}
+
 type Event struct {
 	Title  string      `json:"title"`
 	At     string      `json:"at,omitempty"`
-	Date   time.Time   `json:"date"`
+	Date   EventDate   `json:"date"`
 	Genres []string    `json:"genres"`
 	Links  []EventLink `json:"links,omitempty"`
 }
@@ -65,7 +80,7 @@ func main() {
 
 func prettyPrintEvents(events []Event) {
 	for _, event := range events {
-		fmt.Printf("\n%s\n%s\n%s\n", event.Date.Format(time.DateOnly), event.Title, strings.Join(event.Genres, ", "))
+		fmt.Printf("\n%s\n%s\n%s\n", time.Time(event.Date).Format(time.DateOnly), event.Title, strings.Join(event.Genres, ", "))
 		if event.At != "" {
 			fmt.Printf("%s\n", event.At)
 		}

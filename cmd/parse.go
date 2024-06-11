@@ -20,9 +20,9 @@ func parseRawData(rawEvents []rawEventData) []Event {
 		}
 
 		event := Event{
-			Title:  title,
-			Date:   date,
-			At:     at,
+			Title:  strings.TrimSpace(title),
+			Date:   EventDate(date),
+			At:     strings.TrimSpace(at),
 			Links:  cleanEventLinks(rawEvent.links),
 			Genres: parseGenres(rawEvent.genre),
 		}
