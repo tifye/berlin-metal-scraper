@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
 	"strings"
 	"time"
@@ -11,16 +13,16 @@ import (
 )
 
 type Event struct {
-	Title  string
-	At     string
-	Date   time.Time
-	Genres []string
-	Links  []EventLink
+	Title  string      `json:"title"`
+	At     string      `json:"at,omitempty"`
+	Date   time.Time   `json:"date"`
+	Genres []string    `json:"genres"`
+	Links  []EventLink `json:"links,omitempty"`
 }
 
 type EventLink struct {
-	Title string
-	Url   string
+	Title string `json:"title"`
+	Url   string `json:"url"`
 }
 
 type rawEventDataLink struct {
@@ -46,7 +48,22 @@ func main() {
 		log.Fatal(err)
 	}
 
+	outputJson := flag.Bool("json", false, "output JSON")
+	flag.Parse()
+
 	events := parseRawData(eventsData)
+	if *outputJson {
+		output, err := json.Marshal(events)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(output))
+	} else {
+		prettyPrintEvents(events)
+	}
+}
+
+func prettyPrintEvents(events []Event) {
 	for _, event := range events {
 		fmt.Printf("\n%s\n%s\n%s\n", event.Date.Format(time.DateOnly), event.Title, strings.Join(event.Genres, ", "))
 		if event.At != "" {
